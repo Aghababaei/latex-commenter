@@ -1,0 +1,137 @@
+{
+  "name": "latex-commenter",
+  "displayName": "LaTeX Commenter",
+  "description": "Inline review comments for .tex files — highlight text to annotate, see notes on hover, and get margin notes in the compiled PDF.",
+  "version": "1.0.0",
+  "publisher": "Aghababaei",
+  "author": {
+    "name": "Amin Aghababaei",
+    "email": "a.aghababaei44@gmail.com",
+    "url": "https://github.com/Aghababaei"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "latex",
+    "tex",
+    "comments",
+    "review",
+    "annotation"
+  ],
+  "activationEvents": [
+    "onLanguage:latex",
+    "onLanguage:tex"
+  ],
+  "main": "./out/extension.js",
+  "icon": "media/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Aghababaei/latex-commenter"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "latexCommenter.addComment",
+        "title": "LaTeX: Add Comment to Selection"
+      },
+      {
+        "command": "latexCommenter.deleteComment",
+        "title": "LaTeX: Delete Comment",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "latexCommenter.clearAll",
+        "title": "LaTeX: Clear All Comments"
+      },
+      {
+        "command": "latexCommenter.exportComments",
+        "title": "LaTeX: Export Comments to File"
+      },
+      {
+        "command": "latexCommenter.revealComment",
+        "title": "Reveal in Editor"
+      },
+      {
+        "command": "latexCommenter.pickAndDelete",
+        "title": "LaTeX: Delete a Comment..."
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "latexCommenter.addComment",
+          "when": "(editorLangId == latex || editorLangId == tex) && editorHasSelection",
+          "group": "1_modification"
+        },
+        {
+          "command": "latexCommenter.pickAndDelete",
+          "when": "editorLangId == latex || editorLangId == tex",
+          "group": "1_modification"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "latexCommenter.deleteComment",
+          "when": "view == latexCommenterComments && viewItem == comment",
+          "group": "inline"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "latexCommenter.clearAll",
+          "when": "view == latexCommenterComments",
+          "group": "navigation"
+        },
+        {
+          "command": "latexCommenter.exportComments",
+          "when": "view == latexCommenterComments",
+          "group": "navigation"
+        }
+      ]
+    },
+    "views": {
+      "explorer": [
+        {
+          "id": "latexCommenterComments",
+          "name": "LaTeX Comments"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "LaTeX Commenter",
+      "properties": {
+        "latexCommenter.highlightColor": {
+          "type": "string",
+          "default": "rgba(255, 220, 0, 0.35)",
+          "description": "Background color for commented text regions (CSS rgba or hex)"
+        },
+        "latexCommenter.authorName": {
+          "type": "string",
+          "default": "",
+          "description": "Your name to attach to comments (leave blank to be prompted)"
+        },
+        "latexCommenter.showCodeLens": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show '💬 Add Comment' CodeLens above selections"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.41",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^2.22.0",
+    "typescript": "^5.9.3"
+  }
+}

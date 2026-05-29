@@ -2,7 +2,7 @@
   "name": "latex-commenter",
   "displayName": "LaTeX Commenter",
   "description": "Inline review comments for .tex files — highlight text to annotate, see notes on hover, and get margin notes in the compiled PDF.",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "publisher": "Aghababaei",
   "author": {
     "name": "Amin Aghababaei",

@@ -55,11 +55,10 @@ function applyDecorations(editor: vscode.TextEditor, store: CommentStore): void 
     // Yellow highlight on the original selected text
     const start = new vscode.Position(c.range.startLine, c.range.startChar);
     const end   = new vscode.Position(c.range.endLine,   c.range.endChar);
+    const hoverMd = buildHoverMarkdown(c);
     highlights.push({
       range: new vscode.Range(start, end),
-      hoverMessage: new vscode.MarkdownString(
-        `**💬 ${c.author}** · *${c.timestamp}*\n\n${c.commentText}`
-      ),
+      hoverMessage: hoverMd,
     });
 
     // Find the \todo{...} tag in the document and collapse it
@@ -67,7 +66,7 @@ function applyDecorations(editor: vscode.TextEditor, store: CommentStore): void 
     if (idx !== -1) {
       const tStart = editor.document.positionAt(idx);
       const tEnd   = editor.document.positionAt(idx + c.todoText.length);
-      hides.push({ range: new vscode.Range(tStart, tEnd) });
+      hides.push({ range: new vscode.Range(tStart, tEnd), hoverMessage: hoverMd });
     }
   }
 
@@ -78,15 +77,16 @@ function applyDecorations(editor: vscode.TextEditor, store: CommentStore): void 
 // ─────────────────────────────────────────────────────────────────────────────
 // Ensure \usepackage{todonotes} is in preamble
 // ─────────────────────────────────────────────────────────────────────────────
-async function ensureTodonotesPackage(editor: vscode.TextEditor): Promise<void> {
+async function ensureTodonotesPackage(editor: vscode.TextEditor): Promise<number> {
   const text = editor.document.getText();
-  if (text.includes('todonotes')) { return; }
+  if (text.includes('todonotes')) { return -1; }
   const beginDoc = text.indexOf('\\begin{document}');
-  if (beginDoc === -1) { return; }
+  if (beginDoc === -1) { return -1; }
   const pos = editor.document.positionAt(beginDoc);
   await editor.edit(eb => {
     eb.insert(pos, '\\usepackage[colorinlistoftodos]{todonotes}\n');
   });
+  return pos.line; // caller uses this to shift comment ranges below this line
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -120,6 +120,15 @@ class CommentCodeLensProvider implements vscode.CodeLensProvider {
 // ─────────────────────────────────────────────────────────────────────────────
 function uid(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+function buildHoverMarkdown(c: Comment): vscode.MarkdownString {
+  const md = new vscode.MarkdownString();
+  md.isTrusted = true;
+  md.appendMarkdown(`**💬 ${c.author}** · *${c.timestamp}*\n\n`);
+  md.appendMarkdown(`> ${c.selectedText.replace(/\n/g, '\n> ')}\n\n`);
+  md.appendMarkdown(`---\n\n${c.commentText}`);
+  return md;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -189,6 +198,37 @@ export function activate(context: vscode.ExtensionContext): void {
     if (isLatex(ed)) { applyDecorations(ed, store); }
   });
 
+  // ── HOVER PROVIDER ─────────────────────────────────────────────────────────
+  context.subscriptions.push(
+    vscode.languages.registerHoverProvider(
+      [{ language: 'latex', scheme: 'file' }, { language: 'tex', scheme: 'file' }],
+      {
+        provideHover(document, position) {
+          const comments = store.getForFile(document.uri.fsPath);
+          const docText = document.getText();
+          for (const c of comments) {
+            const selStart = new vscode.Position(c.range.startLine, c.range.startChar);
+            const selEnd   = new vscode.Position(c.range.endLine,   c.range.endChar);
+            const selRange = new vscode.Range(selStart, selEnd);
+            let matched = selRange.contains(position);
+            if (!matched) {
+              const idx = docText.indexOf(c.todoText);
+              if (idx !== -1) {
+                const tStart = document.positionAt(idx);
+                const tEnd   = document.positionAt(idx + c.todoText.length);
+                matched = new vscode.Range(tStart, tEnd).contains(position);
+              }
+            }
+            if (matched) {
+              return new vscode.Hover(buildHoverMarkdown(c), selRange);
+            }
+          }
+          return undefined;
+        },
+      }
+    )
+  );
+
   // ── ADD COMMENT ────────────────────────────────────────────────────────────
   context.subscriptions.push(
     vscode.commands.registerCommand('latexCommenter.addComment', async () => {
@@ -245,8 +285,13 @@ export function activate(context: vscode.ExtensionContext): void {
       // Insert \todo right after the selection (on same line, no visible break)
       await editor.edit(eb => { eb.insert(selection.end, todoText); });
 
-      // Auto-add todonotes package if needed
-      await ensureTodonotesPackage(editor);
+      // Auto-add todonotes package if needed; returns the insertion line if a
+      // new line was prepended, which shifts all body lines down by 1.
+      const insertedAtLine = await ensureTodonotesPackage(editor);
+      if (insertedAtLine !== -1 && comment.range.startLine >= insertedAtLine) {
+        comment.range.startLine += 1;
+        comment.range.endLine   += 1;
+      }
 
       store.add(comment);
       codeLensProvider.updateSelection(null);

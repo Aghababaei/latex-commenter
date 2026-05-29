@@ -1,0 +1,141 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath, amssymb}
+\usepackage{hyperref}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+\title{Sample Document for LaTeX Commenter}
+\author{Amin Aghababaei}
+\date{\today}
+
+\usepackage[colorinlistoftodos]{todonotes}
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This document is a sandbox for testing the LaTeX Commenter extension.
+Select any sentence or phrase, then use to annotate it. Hover over highlighted text to see comments inline.
+\end{abstract}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Introduction}
+% ─────────────────────────────────────────────────────────────────────────────
+
+Machine learning has become one of the most transformative technologies of the
+past decade, enabling applications that were previously considered impossible.
+From image recognition to natural language processing, neural networks now
+underpin a broad spectrum of real-world systems.
+
+Despite these advances, a fundamental challenge remains: models trained on one
+distribution often fail catastrophically when deployed in a different
+environment. This phenomenon, known as distribution shift, is a critical
+bottleneck in deploying reliable AI systems at scale.
+
+In this paper, we propose a novel regularization scheme that improves
+out-of-distribution generalization without requiring access to target-domain
+data at training time. Our method achieves state-of-the-art results on five
+standard benchmarks while adding negligible computational overhead.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Related Work}
+% ─────────────────────────────────────────────────────────────────────────────
+
+Early approaches to domain adaptation relied on explicit feature alignment
+between source and target domains~\cite{pan2010survey}. These methods typically
+minimized the Maximum Mean Discrepancy (MMD) between feature distributions,
+which required paired or unpaired samples from both domains.
+
+More recent work has explored invariant risk minimization (IRM), which seeks
+representations that achieve the same optimal classifier across all training
+environments. While theoretically elegant, IRM is notoriously difficult to
+optimize in practice and sensitive to the choice of penalty coefficient.
+
+Contrastive learning methods have also shown promise for learning
+distribution-robust representations. By pulling together augmented views of
+the same sample and pushing apart views from different samples, these
+approaches encourage features that are invariant to nuisance transformations.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Method}
+% ─────────────────────────────────────────────────────────────────────────────
+
+\subsection{Problem Setup}
+
+Let $\mathcal{D} = \{(x_i, y_i)\}_{i=1}^{N}$ denote a training dataset drawn
+from source distribution $P_s$. At test time, inputs are drawn from a
+potentially different distribution $P_t$. Our goal is to learn a hypothesis
+$h: \mathcal{X} \to \mathcal{Y}$ that minimizes the expected loss under $P_t$,
+given access only to samples from $P_s$.
+
+\subsection{Proposed Regularizer}
+
+We introduce a \emph{diversity penalty} $\Omega(\theta)$ that encourages the
+model to rely on a diverse set of input features rather than a single
+high-signal shortcut. Formally,
+
+\begin{equation}
+  \mathcal{L}(\theta) = \mathbb{E}_{(x,y)\sim P_s}\bigl[\ell(h_\theta(x), y)\bigr]
+  + \lambda\,\Omega(\theta),
+\end{equation}
+
+where $\lambda > 0$ is a scalar hyperparameter and $\Omega$ is defined as the
+negative entropy of the normalized gradient magnitudes with respect to input
+features.
+
+\subsection{Optimization}
+
+We train using stochastic gradient descent with momentum. The penalty term
+$\Omega$ is computed over mini-batches and back-propagated through the feature
+extractor. We find that a warm-up schedule for $\lambda$ is essential for
+stable training, particularly in early epochs when the model has not yet
+learned meaningful representations.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Experiments}
+% ─────────────────────────────────────────────────────────────────────────────
+
+We evaluate our method on the DomainBed benchmark suite, which includes
+five datasets: PACS, VLCS, OfficeHome, TerraIncognita, and DomainNet.
+All experiments use a ResNet-50 backbone pretrained on ImageNet.
+
+\begin{table}[h]
+  \centering
+  \caption{Average out-of-distribution accuracy (\%) across five datasets.}
+  \begin{tabular}{lcc}
+    \hline
+    \textbf{Method}  & \textbf{Avg.\ Accuracy} & \textbf{Std.\ Dev.} \\
+    \hline
+    ERM              & 64.3                    & 0.6 \\
+    IRM              & 63.5                    & 0.8 \\
+    GroupDRO         & 65.1                    & 0.7 \\
+    \textbf{Ours}    & \textbf{67.4}           & \textbf{0.5} \\
+    \hline
+  \end{tabular}
+\end{table}
+
+Our method consistently outperforms all baselines. Notably, it shows the
+largest gains on datasets with strong spurious correlations, which is consistent
+with the motivation behind our diversity penalty.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Conclusion}
+% ─────────────────────────────────────────────────────────────────────────────
+
+We presented a simple and effective regularization technique for improving
+out-of-distribution generalization. Our experiments demonstrate consistent
+improvements across diverse benchmarks. Future work will explore extending
+this approach to sequence models and large language models, where distribution
+shift is equally prevalent but less well-studied.
+
+\bibliographystyle{plain}
+\begin{thebibliography}{9}
+\bibitem{pan2010survey}
+  Sinno Jialin Pan and Qiang Yang.
+  \textit{A Survey on Transfer Learning}.
+  IEEE Transactions on Knowledge and Data Engineering, 22(10):1345--1359, 2010.
+\end{thebibliography}
+
+\end{document}
